@@ -1,0 +1,10 @@
+# Datos de base de datos (se regeneran con docker compose)
+mysql-data/
+
+# Claves SSH (NUNCA subir claves privadas)
+ssh-keys/
+
+# Archivos temporales y de sistema
+*.log
+*.tmp
+.DS_Store

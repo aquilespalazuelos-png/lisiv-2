@@ -1,0 +1,102 @@
+services:
+
+  php:
+    build:
+      context: ./
+      dockerfile: Dockerfile
+    container_name: fimaz_php
+    restart: always
+    ports:
+      - 80:80
+      - 443:443
+    volumes:
+      - ./debian/public_html:/home/debian/public_html
+    networks:
+      - fimaz_network
+    depends_on:
+      - mysql
+
+  mysql:
+    image: mysql:8.4
+    container_name: fimaz_mysql
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: debian
+      MYSQL_DATABASE: debian
+      MYSQL_USER: debian
+      MYSQL_PASSWORD: debian
+    ports:
+      - "3306:3306"
+    volumes:
+      - ./mysql-data:/var/lib/mysql
+    networks:
+      - fimaz_network
+
+  phpmyadmin:
+    image: phpmyadmin:latest
+    container_name: fimaz_phpmyadmin
+    restart: always
+    ports:
+      - 8080:80
+    environment:
+      - PMA_HOST=fimaz_mysql
+      - PMA_PORT=3306
+      - PMA_ARBITRARY=1
+      - MYSQL_ROOT_PASSWORD=debian
+    volumes:
+      - ./uploads.ini:/usr/local/etc/php/conf.d/uploads.ini
+      - ./my.cnf:/etc/mysql/conf.d/my.cnf:ro
+    depends_on:
+      - mysql
+    networks:
+      - fimaz_network
+
+  proftpd:
+    build:
+      context: ./
+      dockerfile: Dockerfile
+    container_name: fimaz_proftpd
+    restart: always
+    ports:
+      - "21:21"
+      - "30000-30009:30000-30009"
+    volumes:
+      - ./debian/public_html:/home/debian/public_html
+      - ./proftpd.conf:/etc/proftpd/proftpd.conf:ro
+      - ./ftpusers:/etc/proftpd/ftpusers:ro
+    networks:
+      - fimaz_network
+
+  sftp:
+    image: atmoz/sftp
+    container_name: fimaz_sftp
+    volumes:
+      - ./debian/public_html:/home/debian/public_html
+      - ./users.conf:/etc/sftp/users.conf:ro
+      - ./ssh-keys/ssh_host_rsa_key:/etc/ssh/ssh_host_rsa_key
+      - ./ssh-keys/ssh_host_ed25519_key:/etc/ssh/ssh_host_ed25519_key
+    ports:
+      - "2222:22"
+    networks:
+      - fimaz_network
+    environment:
+      SFTP_USERS: "file:/etc/sftp/users.conf"
+      SFTP_LOGLEVEL: INFO
+    restart: always
+
+
+networks:
+  fimaz_network:
+    driver: bridge
+
+volumes:
+  config:
+    driver: local
+  php:
+    driver: local
+  mysql:
+    driver: local
+  sftp:
+    driver: local
+  proftpd:
+    driver: local
